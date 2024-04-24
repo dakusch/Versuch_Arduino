@@ -1,0 +1,129 @@
+\documentclass[12pt,a4paper]{article}
+
+% Pakete laden
+\usepackage{ifthen}    % Für bedingte Anweisungen
+\usepackage{xcolor}    % Für farbigen Text
+\usepackage{framed}    % Für Rahmen um Text
+\usepackage{lipsum}    % Für Beispieltext
+\usepackage{environ}   % Für erweiterte Umgebungskontrolle
+\usepackage{graphicx}  % Für Bilder
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{caption}   % Für Bildunterschriften außerhalb von 'figure'-Umgebungen
+\usepackage{float}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{locale = DE}  % Für deutsche Dezimaltrennzeichen
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{tikz} % Für karierte Boxen
+
+\usepackage{fancyhdr}
+\pagestyle{fancy} % Den Seitenstil auf 'fancy' setzen
+\fancyhf{} % Alle Kopf- und Fußzeilenfelder bereinigen
+
+% Kopfzeile
+\fancyhead[L]{\leftmark} % Links: Kapitelname
+\fancyhead[C]{} % Mitte: leer
+\fancyhead[R]{\rightmark} % Rechts: Abschnittsname
+
+% Fußzeile
+\fancyfoot[L]{Uni Bremen} % Links: Ihr Name oder was auch immer Sie möchten
+\fancyfoot[C]{Seite \thepage} % Mitte: Seitenzahl
+\fancyfoot[R]{\today} % Rechts: Aktuelles Datum
+
+% Linien oben und unten
+\renewcommand{\headrulewidth}{0.4pt} % Linienstärke der Kopfzeile
+\renewcommand{\footrulewidth}{0.4pt} % Linienstärke der Fußzeile
+
+% Farben definieren
+\definecolor{loesungsblau}{rgb}{0.204, 0.373, 0.667} % Ein dunkles Blau für die Lösungen
+\definecolor{aufgabenfarbe}{rgb}{0.85, 0.85, 1} % A lighter shade of blue for the Aufgabenumgebung
+
+% Rahmenstil für Lösungen anpassen
+\newenvironment{customframe}{
+    \def\FrameCommand{{\color{loesungsblau}\vrule width 4pt \hspace{10pt}}}%
+    \MakeFramed {\advance\hsize-\width \FrameRestore}%
+}{%
+    \endMakeFramed
+}
+
+% Variable definieren, um zu steuern, ob Lösungen angezeigt werden sollen
+\newboolean{zeigenloesungen}
+\setboolean{zeigenloesungen}{true}% Auf 'false' für die Schülerversion
+
+% Lösungsumgebung definieren
+\NewEnviron{lösung}{
+    \ifthenelse{\boolean{zeigenloesungen}}%
+    {%
+        \begin{customframe}
+        \noindent\textbf{\color{loesungsblau}Lösung:}\\ \BODY
+        \end{customframe}%
+        \centering
+    }%
+    {}%
+}
+
+% Zähler für Aufgaben definieren, der sich nach Kapiteln richtet
+\newcounter{aufgabe}[section]
+\renewcommand{\theaufgabe}{\thesection.\arabic{aufgabe}}
+
+% Aufgabenumgebung definieren
+\NewEnviron{aufgabe}{
+    \refstepcounter{aufgabe} % Aufgabenzähler erhöhen
+    \begin{center}
+    \begin{minipage}{1\textwidth}
+        \colorbox{aufgabenfarbe}{
+            \parbox{\dimexpr\textwidth-2\fboxsep}{
+                \textbf{Aufgabe \theaufgabe:}\ \BODY % Aufgabennummer anzeigen
+            }
+        }
+    \end{minipage}
+    \end{center}
+}
+
+% Umgebung für ein kariertes Feld
+\newcommand{\karierteBox}[1]{
+\ifthenelse{\boolean{zeigenloesungen}}%
+{%
+}
+{%
+    \begin{center}
+    \begin{tikzpicture}
+        \draw[step=0.5, gray, very thin] (0,0) grid (16,#1); % Zeichnet ein 5x#1 Raster
+    \end{tikzpicture}
+    \end{center}
+}
+}
+
+
+\begin{document}
+
+% Titelseite Deckblatt mit Logo
+
+\title{Schüler Workshop - Labor X - Übertragung von Daten mit einem Arduino}
+\maketitle
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{logos/antlogo.pdf}
+\end{figure}
+
+\author{}
+\date{}
+
+\include{grundmodul}
+
+% \include{erweitertes_modul}
+
+% \include{fortgeschrittenes_modul}
+
+
+\end{document}
