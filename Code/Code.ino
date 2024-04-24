@@ -1,14 +1,15 @@
-const int txPin = 12;
-const unsigned long bitDuration = 500;
-const unsigned long delayBetweenMessages = 3000;
-
-const char wort[] = "Hi";
-const int wordLength = sizeof(wort) - 1;
-int binaryArray[8 * wordLength];
+const int txPin = 12;  // Der Pin, über den das Signal gesendet wird
+const int dotDuration = 250;  // Dauer eines Punktes in Millisekunden
+const int dashDuration = dotDuration * 3;  // Dauer eines Strichs, das Dreifache eines Punktes
+const int elementSpace = dotDuration;  // Pause zwischen Elementen eines Buchstabens
+const int letterSpace = dotDuration * 3;  // Pause zwischen Buchstaben
+const int wordSpace = dotDuration * 7;  // Pause zwischen Wiederholungen des Wortes
 
 enum State {
   SEND_PREAMBLE,
-  SEND_WORD,
+  SEND_D,
+  SEND_H,
+  SEND_I,
   WAITING
 };
 
@@ -16,18 +17,9 @@ State currentState = SEND_PREAMBLE;
 unsigned long lastActionTime = 0;
 int bitIndex = 0;
 
-void asciiToBinary(const char wort[], int binaryArray[]) {
-  for (int i = 0; i < wordLength; i++) {
-    char c = wort[i];
-    for (int j = 0; j < 8; j++) {
-      binaryArray[i * 8 + j] = (c >> (7 - j)) & 1;
-    }
-  }
-}
-
 void setup() {
   pinMode(txPin, OUTPUT);
-  asciiToBinary(wort, binaryArray);
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -35,38 +27,59 @@ void loop() {
   
   switch (currentState) {
     case SEND_PREAMBLE:
-      if (currentTime - lastActionTime >= bitDuration) {
+      if (currentTime - lastActionTime >= dotDuration) {
         digitalWrite(txPin, bitIndex % 2 == 0 ? HIGH : LOW);
         bitIndex++;
         lastActionTime = currentTime;
 
         if (bitIndex == 8) {
           bitIndex = 0;
-          currentState = SEND_WORD;
-        }
-      }
-      break;
-    
-    case SEND_WORD:
-      if (currentTime - lastActionTime >= bitDuration) {
-        if (bitIndex < 8 * wordLength) {
-          digitalWrite(txPin, binaryArray[bitIndex] ? HIGH : LOW);
-          bitIndex++;
-          lastActionTime = currentTime;
-        } else {
-          digitalWrite(txPin, LOW);
-          bitIndex = 0;
-          currentState = WAITING;
-          lastActionTime = currentTime;
+          currentState = SEND_D;
         }
       }
       break;
 
+    case SEND_D:
+      sendMorse("-..");
+      currentState = SEND_H;
+      break;
+    
+    case SEND_H:
+      sendMorse("....");
+      currentState = SEND_I;
+      break;
+    
+    case SEND_I:
+      sendMorse("..");
+      currentState = WAITING;
+      break;
+
     case WAITING:
-      if (currentTime - lastActionTime >= delayBetweenMessages) {
+      if (currentTime - lastActionTime >= wordSpace) {
         currentState = SEND_PREAMBLE;
         lastActionTime = currentTime;
       }
       break;
   }
+}
+
+void sendMorse(const char *code) {
+  while (*code) {
+    switch (*code++) {
+      case '.':
+        digitalWrite(txPin, HIGH);
+        delay(dotDuration);
+        digitalWrite(txPin, LOW);
+        delay(elementSpace);
+        break;
+      case '-':
+        digitalWrite(txPin, HIGH);
+        delay(dashDuration);
+        digitalWrite(txPin, LOW);
+        delay(elementSpace);
+        break;
+    }
+    lastActionTime = millis();
+  }
+  delay(letterSpace - elementSpace);  // Abzüglich der letzten Elementpause
 }
