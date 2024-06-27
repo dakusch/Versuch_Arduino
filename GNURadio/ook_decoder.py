@@ -6,11 +6,11 @@
 #
 # GNU Radio Python Flow Graph
 # Title: Not titled yet
-# GNU Radio version: 3.10.9.2
+# GNU Radio version: 3.10.6.0
 
+from packaging.version import Version as StrictVersion
 from PyQt5 import Qt
 from gnuradio import qtgui
-from PyQt5 import QtCore
 from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import filter
@@ -23,6 +23,8 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
+from gnuradio.qtgui import Range, RangeWidget
+from PyQt5 import QtCore
 import ook_decoder_epy_block_1 as epy_block_1  # embedded python block
 import sip
 
@@ -54,9 +56,10 @@ class ook_decoder(gr.top_block, Qt.QWidget):
         self.settings = Qt.QSettings("GNU Radio", "ook_decoder")
 
         try:
-            geometry = self.settings.value("geometry")
-            if geometry:
-                self.restoreGeometry(geometry)
+            if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+                self.restoreGeometry(self.settings.value("geometry").toByteArray())
+            else:
+                self.restoreGeometry(self.settings.value("geometry"))
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
 
@@ -72,11 +75,11 @@ class ook_decoder(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._threshold_range = qtgui.Range(0.01, 1, 0.01, 0.5, 200)
-        self._threshold_win = qtgui.RangeWidget(self._threshold_range, self.set_threshold, "Threshold", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._threshold_range = Range(0.01, 1, 0.01, 0.5, 200)
+        self._threshold_win = RangeWidget(self._threshold_range, self.set_threshold, "Threshold", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._threshold_win)
-        self._noise_amplitude_range = qtgui.Range(0, 2, .01, 0, 200)
-        self._noise_amplitude_win = qtgui.RangeWidget(self._noise_amplitude_range, self.set_noise_amplitude, "Noise Level", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._noise_amplitude_range = Range(0, 2, .01, 0, 200)
+        self._noise_amplitude_win = RangeWidget(self._noise_amplitude_range, self.set_noise_amplitude, "Noise Level", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._noise_amplitude_win)
         self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
                 interpolation=1,
@@ -245,6 +248,9 @@ class ook_decoder(gr.top_block, Qt.QWidget):
 
 def main(top_block_cls=ook_decoder, options=None):
 
+    if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+        style = gr.prefs().get_string('qtgui', 'style', 'raster')
+        Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
 
     tb = top_block_cls()

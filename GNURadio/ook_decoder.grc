@@ -115,7 +115,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [24, 372.0]
+    coordinate: [32, 404.0]
     rotation: 0
     state: true
 - name: analog_sig_source_x_0
@@ -173,7 +173,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [952, 204.0]
+    coordinate: [1096, 204.0]
     rotation: 0
     state: true
 - name: blocks_throttle2_0
@@ -230,7 +230,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [600, 196.0]
+    coordinate: [744, 196.0]
     rotation: 0
     state: true
 - name: qtgui_time_sink_x_0
@@ -327,7 +327,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1160, 316.0]
+    coordinate: [1304, 316.0]
     rotation: 180
     state: true
 - name: qtgui_time_sink_x_1
@@ -444,7 +444,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1160, 180.0]
+    coordinate: [1304, 180.0]
     rotation: 0
     state: true
 

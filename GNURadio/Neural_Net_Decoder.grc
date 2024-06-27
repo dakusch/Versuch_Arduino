@@ -44,14 +44,14 @@ blocks:
     rangeType: float
     start: '0'
     step: '.01'
-    stop: '2'
+    stop: '10'
     value: '0'
     widget: counter_slider
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [400, 116.0]
+    coordinate: [384, 12.0]
     rotation: 0
     state: true
 - name: samp_rate
@@ -66,49 +66,16 @@ blocks:
     coordinate: [184, 12]
     rotation: 0
     state: enabled
-- name: samp_rate_0
-  id: variable
-  parameters:
-    comment: ''
-    value: '32000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [184, 100.0]
-    rotation: 0
-    state: enabled
 - name: sps
   id: variable
   parameters:
     comment: ''
-    value: '16'
+    value: '100'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [296, 100.0]
-    rotation: 0
-    state: true
-- name: threshold
-  id: variable_qtgui_range
-  parameters:
-    comment: ''
-    gui_hint: ''
-    label: Threshold
-    min_len: '200'
-    orient: QtCore.Qt.Horizontal
-    rangeType: float
-    start: '0.01'
-    step: '0.01'
-    stop: '1'
-    value: '0.5'
-    widget: counter_slider
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [536, 116.0]
+    coordinate: [296, 12.0]
     rotation: 0
     state: true
 - name: analog_noise_source_x_0
@@ -137,7 +104,7 @@ blocks:
     alias: ''
     amp: '1'
     comment: ''
-    freq: samp_rate/(2*sps)
+    freq: samp_rate/sps/2
     maxoutbuf: '0'
     minoutbuf: '0'
     offset: '0'
@@ -150,7 +117,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [40, 204.0]
+    coordinate: [16, 164.0]
     rotation: 0
     state: true
 - name: blocks_add_xx_0
@@ -212,44 +179,74 @@ blocks:
 - name: epy_block_0
   id: epy_block
   parameters:
-    _source_code: "import numpy as np\nimport tensorflow as tf\nfrom gnuradio import\
-      \ gr\n\nclass keras_model_predictor(gr.sync_block):\n    def __init__(self,\
-      \ model_path, threshold=0.5, windowsize=100):\n        gr.sync_block.__init__(\n\
-      \            self,\n            name='Keras Model Predictor',\n            in_sig=[np.float32],\
-      \  # Eingangssignal als float32\n            out_sig=[np.int32]    # Ausgangssignal\
-      \ als int32 (f\xFCr 0 oder 1 Werte)\n        )\n        self.threshold = threshold\n\
-      \        self.window_size = windowsize\n        self.buffer = np.zeros((self.window_size,),\
-      \ dtype=np.float32)  # Buffer, um die letzten 'windowsize' Samples zu speichern\n\
-      \n        # Lade das Keras-Modell\n        self.model = tf.keras.models.load_model(model_path)\n\
-      \n    def work(self, input_items, output_items):\n        in0 = input_items[0]\n\
-      \        out = output_items[0]\n\n        for i in range(len(in0)):\n      \
-      \      # Aktualisiere den Buffer mit dem neuesten Sample\n            self.buffer[:-1]\
-      \ = self.buffer[1:]\n            self.buffer[-1] = in0[i]\n\n            if\
-      \ i >= self.window_size - 1:\n                # Umforme den Buffer, um der Eingabeerwartung\
-      \ des Modells zu entsprechen\n                model_input = np.expand_dims(self.buffer,\
-      \ axis=0)\n\n                # Mache eine Vorhersage mit dem Modell\n      \
-      \          prediction = self.model.predict(model_input)\n\n                #\
-      \ Interpretiere die Vorhersage basierend auf dem Schwellenwert\n           \
-      \     out[i] = 1 if prediction[0][0] > self.threshold else 0\n            else:\n\
-      \                # F\xFClle die Ausgabe mit 0, bis genug Daten f\xFCr die erste\
-      \ Vorhersage gesammelt wurden\n                out[i] = 0\n\n        return\
-      \ len(out)\n\n"
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nfrom tensorflow.keras.models\
+      \ import load_model\n\nclass KerasOOKDecoder(gr.sync_block):\n    def __init__(self,\
+      \ offset=0):\n        gr.sync_block.__init__(self,\n                       \
+      \        name=\"Keras OOK Decoder\",\n                               in_sig=[np.float32],\n\
+      \                               out_sig=[np.int32])\n        self.model = load_model('/home/david/Nextcloud/Arbeit_ANT/Versuch_Arduino/Neural_Net/data/tes_new.keras')\n\
+      \        self.symbol_length = 100\n        self.offset = offset  # Offset-Parameter\
+      \ hinzugef\xFCgt\n\n    def work(self, input_items, output_items):\n       \
+      \ in0 = input_items[0]\n        out = output_items[0]\n        \n        # Pr\xFC\
+      fen, ob genug Daten vorhanden sind, um die Verarbeitung zu starten\n       \
+      \ if len(in0) < self.symbol_length + self.offset:\n            return 0  # Nicht\
+      \ genug Daten, um Offset und ein vollst\xE4ndiges Symbol zu behandeln\n\n  \
+      \      # Beginnend vom Offset die Daten f\xFCr das Modell vorbereiten\n    \
+      \    start_index = self.offset\n        end_index = start_index + (len(in0)\
+      \ - self.offset) // self.symbol_length * self.symbol_length\n        reshaped_samples\
+      \ = np.reshape(in0[start_index:end_index], (-1, self.symbol_length))\n\n   \
+      \     # Das Modell auf alle Samples gleichzeitig anwenden\n        predictions\
+      \ = self.model.predict(reshaped_samples).round().astype(np.int32).flatten()\n\
+      \n        # Die Vorhersagen in die Ausgabe kopieren\n        out[:len(predictions)]\
+      \ = predictions\n        \n        return len(predictions)\n"
     affinity: ''
     alias: ''
     comment: ''
     maxoutbuf: '0'
     minoutbuf: '0'
-    threshold: '0.5'
-    windowsize: '10'
+    offset: '0'
   states:
-    _io_cache: ('Moving Average with Threshold Decision', 'blk', [('threshold', '0.5'),
-      ('windowsize', '10')], [('0', 'float', 1)], [('0', 'int', 1)], '', ['threshold'])
+    _io_cache: ('Keras OOK Decoder', 'KerasOOKDecoder', [('offset', '0')], [('0',
+      'float', 1)], [('0', 'int', 1)], '', ['offset'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [760, 308.0]
+    coordinate: [928, 316.0]
     rotation: 0
     state: true
+- name: epy_block_1
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nfrom gnuradio import gr\n\nclass OOK_Synchronizer(gr.sync_block):\n\
+      \    def __init__(self, threshold=0.5, symbol_length=100):\n        gr.sync_block.__init__(self,\n\
+      \                               name=\"OOK Synchronizer\",\n               \
+      \                in_sig=[np.float32],\n                               out_sig=[np.float32])\n\
+      \        self.threshold = threshold\n        self.symbol_length = symbol_length\n\
+      \        self.synced = False\n        self.index = 0\n\n    def work(self, input_items,\
+      \ output_items):\n        in0 = input_items[0]\n        out = output_items[0]\n\
+      \        noutput_items = len(in0)\n\n        for i in range(noutput_items):\n\
+      \            if not self.synced:\n                if in0[i] > self.threshold:\n\
+      \                    self.synced = True\n                    self.index = 0\n\
+      \            if self.synced:\n                if self.index < self.symbol_length:\n\
+      \                    out[self.index] = in0[i]\n                    self.index\
+      \ += 1\n                if self.index == self.symbol_length:\n             \
+      \       self.synced = False\n                    self.index = 0\n\n        return\
+      \ self.index\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    symbol_length: sps
+    threshold: '0.8'
+  states:
+    _io_cache: ('OOK Synchronizer', 'OOK_Synchronizer', [('threshold', '0.5'), ('symbol_length',
+      '100')], [('0', 'float', 1)], [('0', 'float', 1)], '', ['symbol_length', 'threshold'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [688, 260.0]
+    rotation: 0
+    state: bypassed
 - name: qtgui_time_sink_x_0
   id: qtgui_time_sink_x
   parameters:
@@ -305,7 +302,7 @@ blocks:
     marker9: '-1'
     name: '""'
     nconnections: '1'
-    size: int(256/sps)
+    size: int(1024/sps)
     srate: samp_rate
     stemplot: 'True'
     style1: '1'
@@ -344,7 +341,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1368, 420.0]
+    coordinate: [1144, 436.0]
     rotation: 180
     state: true
 - name: qtgui_time_sink_x_1
@@ -390,7 +387,7 @@ blocks:
     label8: Signal 8
     label9: Signal 9
     legend: 'True'
-    marker1: '-1'
+    marker1: '0'
     marker10: '-1'
     marker2: '-1'
     marker3: '-1'
@@ -402,7 +399,7 @@ blocks:
     marker9: '-1'
     name: '""'
     nconnections: '1'
-    size: '256'
+    size: '1024'
     srate: samp_rate
     stemplot: 'False'
     style1: '1'
@@ -444,34 +441,16 @@ blocks:
     coordinate: [680, 484.0]
     rotation: 0
     state: true
-- name: rational_resampler_xxx_0
-  id: rational_resampler_xxx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    decim: sps
-    fbw: '0'
-    interp: '1'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    taps: '[1]'
-    type: fff
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1368, 284.0]
-    rotation: 0
-    state: true
 
 connections:
 - [analog_noise_source_x_0, '0', blocks_add_xx_0, '1']
 - [analog_sig_source_x_0, '0', blocks_throttle2_0, '0']
+- [blocks_add_xx_0, '0', epy_block_1, '0']
 - [blocks_add_xx_0, '0', qtgui_time_sink_x_1, '0']
-- [blocks_int_to_float_0, '0', rational_resampler_xxx_0, '0']
+- [blocks_int_to_float_0, '0', qtgui_time_sink_x_0, '0']
 - [blocks_throttle2_0, '0', blocks_add_xx_0, '0']
-- [rational_resampler_xxx_0, '0', qtgui_time_sink_x_0, '0']
+- [epy_block_0, '0', blocks_int_to_float_0, '0']
+- [epy_block_1, '0', epy_block_0, '0']
 
 metadata:
   file_format: 1
